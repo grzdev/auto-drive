@@ -120,6 +120,25 @@ describe('confirmation counting', () => {
     expect(result.current.isFullyConfirmed).toBe(true);
   });
 
+  it('invokes unwatch exactly once when reaching required confirmations and unmounting', async () => {
+    const { result, unmount } = renderHook(
+      () =>
+        useTransactionConfirmation({ txHash: TX, requiredConfirmations: 2 }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.currentConfs).toBe(1));
+    expect(unwatchCount).toBe(0);
+
+    await emitBlock(101n);
+    expect(result.current.currentConfs).toBe(2);
+    expect(result.current.isFullyConfirmed).toBe(true);
+    expect(unwatchCount).toBe(1);
+
+    unmount();
+    expect(unwatchCount).toBe(1);
+  });
+
   it('keeps counting after the public client is swapped underneath it', async () => {
     // The regression this guards. The effect's cleanup sets a stop flag and the
     // flag was never cleared, so a re-run — which a wallet chain switch causes,
